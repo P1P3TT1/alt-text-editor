@@ -74,16 +74,6 @@ The app auto-detects columns. Recognizes English, Finnish, and Swedish headers:
 - When you close the tab, all data is gone
 - No analytics or tracking
 
-## Deployment to GitHub Pages
-
-1. Fork or clone this repository
-2. Go to Settings → Pages
-3. Set source to `main` branch, `/ (root)`
-
-## Local Development
-
-Just open `index.html` in a browser. No build step required.
-
 ## Dependencies
 
 All loaded from CDN (cdnjs.cloudflare.com):

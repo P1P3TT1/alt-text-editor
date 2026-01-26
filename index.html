@@ -20,27 +20,52 @@
     }
 
     :root {
-      --nova-primary: #4930EB;
-      --nova-primary-hover: #3a26c2;
-      --nova-primary-light: rgba(73, 48, 235, 0.08);
-      --nova-base: #1F1F1F;
-      --nova-secondary: #545776;
-      --nova-success: #056425;
-      --nova-error: #983D23;
-      --nova-alert: #86560F;
-      --bg-page: #FAFAFA;
-      --bg-card: #FFFFFF;
-      --border-color: #E5E5E5;
-      --border-input: #D1D1D1;
-      --text-primary: var(--nova-base);
-      --text-secondary: var(--nova-secondary);
-      --text-muted: #8E8E93;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: rgba(37, 99, 235, 0.1);
+      --success: #10b981;
+      --success-light: rgba(16, 185, 129, 0.1);
+      --warning: #f59e0b;
+      --warning-light: rgba(245, 158, 11, 0.1);
+      --error: #ef4444;
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-elevated: #ffffff;
+      --border-color: #e2e8f0;
+      --border-input: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       --spacing-sm: 8px;
       --spacing-md: 16px;
       --spacing-lg: 24px;
       --spacing-xl: 52px;
-      --radius-card: 8px;
-      --radius-input: 2px;
+      --radius-card: 12px;
+      --radius-input: 6px;
+      --radius-button: 8px;
+    }
+
+    [data-theme="dark"] {
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-light: rgba(59, 130, 246, 0.15);
+      --success: #34d399;
+      --success-light: rgba(52, 211, 153, 0.15);
+      --warning: #fbbf24;
+      --warning-light: rgba(251, 191, 36, 0.15);
+      --error: #f87171;
+      --bg-page: #0f172a;
+      --bg-card: #1e293b;
+      --bg-elevated: #334155;
+      --border-color: #334155;
+      --border-input: #475569;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
     }
 
     body {
@@ -50,6 +75,23 @@
       color: var(--text-primary);
       min-height: 100vh;
       line-height: 1.5;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Smooth theme transitions for all themed elements */
+    .app,
+    .drop-zone,
+    .match-summary,
+    .images-table,
+    .table-header,
+    .table-row,
+    .row-alttext-input,
+    .btn,
+    .language-selector,
+    .theme-toggle,
+    .processing-content,
+    .row-thumbnail {
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .app {
@@ -73,17 +115,24 @@
       font-size: 28px;
       font-weight: 600;
       letter-spacing: -0.02em;
-      color: var(--nova-primary);
+      color: var(--primary);
       margin-bottom: var(--spacing-sm);
+    }
+
+    .header-controls {
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: center;
     }
 
     .language-selector {
       display: flex;
       gap: 4px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-input);
-      border-radius: var(--radius-input);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-button);
       padding: 4px;
+      transition: all 0.2s ease;
     }
 
     .language-btn {
@@ -94,8 +143,8 @@
       background: transparent;
       color: var(--text-secondary);
       cursor: pointer;
-      border-radius: var(--radius-input);
-      transition: all 0.15s ease;
+      border-radius: calc(var(--radius-button) - 2px);
+      transition: all 0.2s ease;
       font-family: 'Inter', sans-serif;
     }
 
@@ -105,13 +154,131 @@
     }
 
     .language-btn.active {
-      background: var(--nova-primary);
+      background: var(--primary);
       color: white;
+    }
+
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-button);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      color: var(--text-secondary);
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      transform: scale(1.05);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.95);
+    }
+
+    .theme-toggle svg {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .theme-toggle:hover svg {
+      transform: rotate(15deg);
+    }
+
+    .theme-toggle:active svg {
+      transform: rotate(-15deg) scale(0.9);
+    }
+
+    /* Focus states with smooth transitions */
+    .theme-toggle,
+    .language-btn,
+    .btn {
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle:focus-visible {
+      outline-color: var(--primary);
+    }
+
+    .language-btn:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+    }
+
+    .btn:focus-visible {
+      outline-color: var(--primary);
+    }
+
+    .row-alttext-input:focus-visible {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
     }
 
     .subtitle {
       color: var(--text-secondary);
       font-size: 16px;
+      transition: color 0.3s ease;
+    }
+
+    /* Enhanced dark mode adjustments */
+    [data-theme="dark"] .drop-zone:hover,
+    [data-theme="dark"] .drop-zone.dragging {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    [data-theme="dark"] .btn-primary {
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    [data-theme="dark"] .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    [data-theme="dark"] h1 {
+      color: var(--primary);
+      text-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Custom scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-page);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-input);
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    [data-theme="dark"] ::-webkit-scrollbar-track {
+      background: var(--bg-card);
+    }
+
+    [data-theme="dark"] ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+    }
+
+    [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-input);
     }
 
     .upload-section {
@@ -127,35 +294,36 @@
       padding: var(--spacing-lg);
       text-align: center;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
       background: var(--bg-card);
       min-height: 180px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      box-shadow: var(--shadow-sm);
     }
 
     .drop-zone:hover, .drop-zone.dragging {
-      border-color: var(--nova-primary);
-      background: var(--nova-primary-light);
+      border-color: var(--primary);
+      background: var(--primary-light);
     }
 
     .drop-zone.has-content {
       border-style: solid;
-      border-color: var(--nova-success);
-      background: rgba(5, 100, 37, 0.05);
+      border-color: var(--success);
+      background: var(--success-light);
     }
 
     .drop-zone-icon {
       width: 40px;
       height: 40px;
       margin-bottom: var(--spacing-sm);
-      color: var(--nova-secondary);
+      color: var(--text-secondary);
     }
 
     .drop-zone.has-content .drop-zone-icon {
-      color: var(--nova-success);
+      color: var(--success);
     }
 
     .drop-zone-title {
@@ -169,7 +337,7 @@
     }
 
     .drop-zone-text strong {
-      color: var(--nova-primary);
+      color: var(--primary);
     }
 
     .drop-zone-hint {
@@ -185,7 +353,7 @@
     }
 
     .drop-zone-status.success {
-      color: var(--nova-success);
+      color: var(--success);
     }
 
     .match-summary {
@@ -197,6 +365,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
     }
 
     .match-stats {
@@ -215,9 +385,9 @@
       margin-bottom: 4px;
     }
 
-    .stat-value.matched { color: var(--nova-success); }
-    .stat-value.unmatched { color: var(--nova-alert); }
-    .stat-value.total { color: var(--nova-primary); }
+    .stat-value.matched { color: var(--success); }
+    .stat-value.unmatched { color: var(--warning); }
+    .stat-value.total { color: var(--primary); }
 
     .stat-label {
       font-size: 13px;
@@ -230,6 +400,8 @@
       border-radius: var(--radius-card);
       overflow: hidden;
       margin-bottom: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
     }
 
     .table-header {
@@ -237,7 +409,7 @@
       grid-template-columns: 80px 1fr 2fr 100px;
       gap: var(--spacing-md);
       padding: var(--spacing-md) var(--spacing-lg);
-      background: var(--bg-page);
+      background: var(--bg-elevated);
       border-bottom: 1px solid var(--border-color);
       font-size: 13px;
       font-weight: 600;
@@ -260,15 +432,16 @@
     }
 
     .table-row:hover {
-      background: var(--bg-page);
+      background: var(--bg-elevated);
     }
 
     .row-thumbnail {
       width: 64px;
       height: 48px;
       object-fit: cover;
-      border-radius: 4px;
+      border-radius: var(--radius-input);
       background: var(--bg-page);
+      border: 1px solid var(--border-color);
     }
 
     .row-filename {
@@ -295,11 +468,15 @@
       font-size: 14px;
       font-family: inherit;
       resize: none;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      transition: all 0.15s ease;
     }
 
     .row-alttext-input:focus {
       outline: none;
-      border-color: var(--nova-primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
     }
 
     .row-status {
@@ -311,22 +488,22 @@
       font-size: 12px;
       font-weight: 500;
       padding: 4px 10px;
-      border-radius: 4px;
+      border-radius: var(--radius-input);
     }
 
     .status-badge.matched {
-      background: rgba(5, 100, 37, 0.1);
-      color: var(--nova-success);
+      background: var(--success-light);
+      color: var(--success);
     }
 
     .status-badge.unmatched {
-      background: rgba(134, 86, 15, 0.1);
-      color: var(--nova-alert);
+      background: var(--warning-light);
+      color: var(--warning);
     }
 
     .status-badge.manual {
-      background: rgba(73, 48, 235, 0.1);
-      color: var(--nova-primary);
+      background: var(--primary-light);
+      color: var(--primary);
     }
 
     .actions-bar {
@@ -344,7 +521,7 @@
 
     .btn {
       padding: 12px 24px;
-      border-radius: var(--radius-input);
+      border-radius: var(--radius-button);
       font-family: 'Inter', sans-serif;
       font-size: 15px;
       font-weight: 500;
@@ -356,13 +533,15 @@
     }
 
     .btn-primary {
-      background: var(--nova-primary);
+      background: var(--primary);
       color: white;
       border: none;
+      box-shadow: var(--shadow-sm);
     }
 
     .btn-primary:hover:not(:disabled) {
-      background: var(--nova-primary-hover);
+      background: var(--primary-hover);
+      box-shadow: var(--shadow-md);
     }
 
     .btn-primary:disabled {
@@ -371,14 +550,15 @@
     }
 
     .btn-secondary {
-      background: transparent;
+      background: var(--bg-elevated);
       color: var(--text-secondary);
-      border: 1px solid var(--border-input);
+      border: 1px solid var(--border-color);
     }
 
     .btn-secondary:hover {
-      border-color: var(--nova-secondary);
+      border-color: var(--border-input);
       color: var(--text-primary);
+      background: var(--bg-page);
     }
 
     .btn-sm {
@@ -403,11 +583,16 @@
     .processing-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(31, 31, 31, 0.6);
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
+    }
+
+    [data-theme="dark"] .processing-overlay {
+      background: rgba(0, 0, 0, 0.85);
     }
 
     .processing-content {
@@ -416,13 +601,16 @@
       padding: var(--spacing-xl);
       text-align: center;
       min-width: 240px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      transition: all 0.2s ease;
     }
 
     .spinner {
       width: 40px;
       height: 40px;
       border: 3px solid var(--border-color);
-      border-top-color: var(--nova-primary);
+      border-top-color: var(--primary);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin: 0 auto var(--spacing-md);
@@ -436,7 +624,7 @@
       position: fixed;
       bottom: var(--spacing-lg);
       right: var(--spacing-lg);
-      background: var(--nova-success);
+      background: var(--success);
       color: white;
       padding: var(--spacing-md) var(--spacing-lg);
       border-radius: var(--radius-card);
@@ -447,6 +635,7 @@
       display: flex;
       align-items: center;
       gap: var(--spacing-sm);
+      box-shadow: var(--shadow-md);
     }
 
     @keyframes slideIn {
@@ -460,13 +649,13 @@
     }
 
     .template-link {
-      color: var(--nova-primary);
+      color: var(--primary);
       cursor: pointer;
       text-decoration: underline;
     }
 
     .template-link:hover {
-      color: var(--nova-primary-hover);
+      color: var(--primary-hover);
     }
 
     @media (max-width: 900px) {
@@ -492,7 +681,7 @@
         gap: var(--spacing-md);
       }
 
-      .language-selector {
+      .header-controls {
         align-self: flex-start;
       }
     }
@@ -542,7 +731,9 @@
         downloadedImages: 'Ladattu {count} kuvaa metatiedoilla',
         errorParsingExcel: 'Virhe Excel-tiedoston jäsentämisessä',
         errorProcessing: 'Virhe kuvien käsittelyssä',
-        language: 'Kieli'
+        language: 'Kieli',
+        darkMode: 'Tumma tila',
+        lightMode: 'Vaalea tila'
       },
       sv: {
         title: 'Alternativ textredigerare',
@@ -577,7 +768,9 @@
         downloadedImages: 'Laddat ner {count} bilder med metadata',
         errorParsingExcel: 'Fel vid tolkning av Excel-fil',
         errorProcessing: 'Fel vid bearbetning av bilder',
-        language: 'Språk'
+        language: 'Språk',
+        darkMode: 'Mörkt läge',
+        lightMode: 'Ljust läge'
       }
     };
 
@@ -884,13 +1077,63 @@
       const [language, setLanguage] = useState(() => {
         return localStorage.getItem('altTextEditorLanguage') || 'fi';
       });
+      const [theme, setTheme] = useState(() => {
+        const saved = localStorage.getItem('altTextEditorTheme');
+        if (saved) return saved;
+
+        // Detect system preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          return 'dark';
+        }
+        return 'light';
+      });
 
       const imageInputRef = useRef(null);
       const excelInputRef = useRef(null);
 
+      // Apply theme to document
+      React.useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+
+        // Update meta theme-color for mobile browsers
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        const color = theme === 'dark' ? '#0f172a' : '#f8fafc';
+        if (metaThemeColor) {
+          metaThemeColor.setAttribute('content', color);
+        } else {
+          const meta = document.createElement('meta');
+          meta.name = 'theme-color';
+          meta.content = color;
+          document.head.appendChild(meta);
+        }
+      }, [theme]);
+
+      // Apply language to document
+      React.useEffect(() => {
+        document.documentElement.setAttribute('lang', language);
+      }, [language]);
+
+      // Keyboard shortcut for theme toggle (Ctrl+Shift+T or Cmd+Shift+T)
+      React.useEffect(() => {
+        const handleKeyboard = (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+            e.preventDefault();
+            toggleTheme();
+          }
+        };
+        window.addEventListener('keydown', handleKeyboard);
+        return () => window.removeEventListener('keydown', handleKeyboard);
+      }, [theme]);
+
       const changeLanguage = (lang) => {
         setLanguage(lang);
         localStorage.setItem('altTextEditorLanguage', lang);
+      };
+
+      const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('altTextEditorTheme', newTheme);
       };
 
       const t = (key, replacements = {}) => {
@@ -1097,19 +1340,38 @@
               <h1>{t('title')}</h1>
               <p className="subtitle">{t('subtitle')}</p>
             </div>
-            <div className="language-selector">
+            <div className="header-controls">
               <button
-                className={`language-btn ${language === 'fi' ? 'active' : ''}`}
-                onClick={() => changeLanguage('fi')}
+                className="theme-toggle"
+                onClick={toggleTheme}
+                title={theme === 'light' ? t('darkMode') : t('lightMode')}
+                aria-label={theme === 'light' ? t('darkMode') : t('lightMode')}
+                aria-pressed={theme === 'dark'}
               >
-                Suomi
+                {theme === 'light' ? (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
               </button>
-              <button
-                className={`language-btn ${language === 'sv' ? 'active' : ''}`}
-                onClick={() => changeLanguage('sv')}
-              >
-                Svenska
-              </button>
+              <div className="language-selector">
+                <button
+                  className={`language-btn ${language === 'fi' ? 'active' : ''}`}
+                  onClick={() => changeLanguage('fi')}
+                >
+                  Suomi
+                </button>
+                <button
+                  className={`language-btn ${language === 'sv' ? 'active' : ''}`}
+                  onClick={() => changeLanguage('sv')}
+                >
+                  Svenska
+                </button>
+              </div>
             </div>
           </header>
 

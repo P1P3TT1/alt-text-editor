@@ -60,14 +60,53 @@
 
     header {
       margin-bottom: var(--spacing-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .header-content {
+      flex: 1;
     }
 
     h1 {
       font-size: 28px;
       font-weight: 600;
       letter-spacing: -0.02em;
-      color: var(--text-primary);
+      color: var(--nova-primary);
       margin-bottom: var(--spacing-sm);
+    }
+
+    .language-selector {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-input);
+      padding: 4px;
+    }
+
+    .language-btn {
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: var(--radius-input);
+      transition: all 0.15s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .language-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-page);
+    }
+
+    .language-btn.active {
+      background: var(--nova-primary);
+      color: white;
     }
 
     .subtitle {
@@ -447,6 +486,15 @@
       .match-stats {
         gap: var(--spacing-lg);
       }
+
+      header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+      }
+
+      .language-selector {
+        align-self: flex-start;
+      }
     }
   </style>
 </head>
@@ -455,6 +503,83 @@
 
   <script type="text/babel">
     const { useState, useRef, useCallback } = React;
+
+    // ============================================
+    // Translations
+    // ============================================
+
+    const translations = {
+      fi: {
+        title: 'Alt-tekstin muokkain',
+        subtitle: 'Tuo kuvia ja Excel-tiedosto lisätäksesi alt-tekstejä metatietoina',
+        imagesDropZone: 'Kuvat',
+        excelDropZone: 'Excel / CSV',
+        clickToUpload: 'Klikkaa ladataksesi',
+        dragAndDrop: 'tai vedä ja pudota',
+        jpegPngSupported: 'JPEG ja PNG tuettu',
+        imagesLoaded: 'kuvaa ladattu',
+        columnsHint: 'Sarakkeet: filename, alt_text ·',
+        downloadTemplate: 'Lataa pohja',
+        entries: 'merkintää',
+        images: 'Kuvat',
+        matched: 'Täsmätty',
+        missingAltText: 'Puuttuva alt-teksti',
+        clearAll: 'Tyhjennä kaikki',
+        preview: 'Esikatselu',
+        filename: 'Tiedostonimi',
+        altText: 'Alt-teksti',
+        status: 'Tila',
+        enterAltText: 'Kirjoita alt-teksti...',
+        statusMatched: 'Täsmätty',
+        statusManual: 'Manuaalinen',
+        statusNoMatch: 'Ei täsmää',
+        haveAltText: 'kuvasta on alt-teksti',
+        downloadAll: 'Lataa kaikki',
+        uploadToStart: 'Lataa kuvia ja Excel-tiedosto aloittaaksesi.',
+        processingImages: 'Käsitellään kuvia...',
+        loadedEntries: 'Ladattu {count} merkintää Excelistä',
+        noImagesToProcess: 'Ei kuvia alt-tekstillä käsiteltäväksi',
+        downloadedImages: 'Ladattu {count} kuvaa metatiedoilla',
+        errorParsingExcel: 'Virhe Excel-tiedoston jäsentämisessä',
+        errorProcessing: 'Virhe kuvien käsittelyssä',
+        language: 'Kieli'
+      },
+      sv: {
+        title: 'Alternativ textredigerare',
+        subtitle: 'Importera bilder och Excel-mappning för att batchredigera alt-textmetadata',
+        imagesDropZone: 'Bilder',
+        excelDropZone: 'Excel / CSV',
+        clickToUpload: 'Klicka för att ladda upp',
+        dragAndDrop: 'eller dra och släpp',
+        jpegPngSupported: 'JPEG och PNG stöds',
+        imagesLoaded: 'bilder laddade',
+        columnsHint: 'Kolumner: filename, alt_text ·',
+        downloadTemplate: 'Ladda ner mall',
+        entries: 'poster',
+        images: 'Bilder',
+        matched: 'Matchade',
+        missingAltText: 'Saknar alt-text',
+        clearAll: 'Rensa alla',
+        preview: 'Förhandsvisning',
+        filename: 'Filnamn',
+        altText: 'Alt-text',
+        status: 'Status',
+        enterAltText: 'Ange alt-text...',
+        statusMatched: 'Matchad',
+        statusManual: 'Manuell',
+        statusNoMatch: 'Ingen matchning',
+        haveAltText: 'av bilder har alt-text',
+        downloadAll: 'Ladda ner alla',
+        uploadToStart: 'Ladda upp bilder och en Excel-fil för att komma igång.',
+        processingImages: 'Bearbetar bilder...',
+        loadedEntries: 'Laddat {count} poster från Excel',
+        noImagesToProcess: 'Inga bilder med alt-text att bearbeta',
+        downloadedImages: 'Laddat ner {count} bilder med metadata',
+        errorParsingExcel: 'Fel vid tolkning av Excel-fil',
+        errorProcessing: 'Fel vid bearbetning av bilder',
+        language: 'Språk'
+      }
+    };
 
     // ============================================
     // PNG Metadata utilities
@@ -756,9 +881,25 @@
       const [isDraggingExcel, setIsDraggingExcel] = useState(false);
       const [isProcessing, setIsProcessing] = useState(false);
       const [toast, setToast] = useState(null);
-      
+      const [language, setLanguage] = useState(() => {
+        return localStorage.getItem('altTextEditorLanguage') || 'fi';
+      });
+
       const imageInputRef = useRef(null);
       const excelInputRef = useRef(null);
+
+      const changeLanguage = (lang) => {
+        setLanguage(lang);
+        localStorage.setItem('altTextEditorLanguage', lang);
+      };
+
+      const t = (key, replacements = {}) => {
+        let text = translations[language][key] || key;
+        Object.keys(replacements).forEach(placeholder => {
+          text = text.replace(`{${placeholder}}`, replacements[placeholder]);
+        });
+        return text;
+      };
 
       const showToast = (message) => {
         setToast(message);
@@ -813,12 +954,12 @@
           setExcelData(result);
           setExcelFileName(file.name);
           setImages(prev => matchImagesWithExcel(prev, result));
-          showToast(`Loaded ${result.rowCount} entries from Excel`);
+          showToast(t('loadedEntries', { count: result.rowCount }));
         } catch (err) {
           console.error('Excel parse error:', err);
-          showToast('Error parsing Excel file');
+          showToast(t('errorParsingExcel'));
         }
-      }, [matchImagesWithExcel]);
+      }, [matchImagesWithExcel, language]);
 
       const handleImageDrop = useCallback((e) => {
         e.preventDefault();
@@ -868,10 +1009,10 @@
       const processAndDownload = async () => {
         const imagesToProcess = images.filter(img => img.altText && (img.isJpeg || img.isPng));
         if (imagesToProcess.length === 0) {
-          showToast('No images with alt text to process');
+          showToast(t('noImagesToProcess'));
           return;
         }
-        
+
         setIsProcessing(true);
 
         try {
@@ -882,11 +1023,11 @@
             if (img.isJpeg) {
               try {
                 let exifObj;
-                try { exifObj = piexif.load(dataUrl); } 
+                try { exifObj = piexif.load(dataUrl); }
                 catch { exifObj = { "0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "Interop": {}, "thumbnail": null }; }
 
                 exifObj["0th"][piexif.ImageIFD.ImageDescription] = img.altText;
-                
+
                 const utf16Encode = (str) => {
                   const arr = [];
                   for (let i = 0; i < str.length; i++) {
@@ -896,7 +1037,7 @@
                   arr.push(0, 0);
                   return arr;
                 };
-                
+
                 exifObj["0th"][piexif.ImageIFD.XPComment] = utf16Encode(img.altText);
                 exifObj["0th"][piexif.ImageIFD.XPSubject] = utf16Encode(img.altText);
 
@@ -907,7 +1048,7 @@
                 console.error('JPEG metadata error:', error);
               }
             }
-            
+
             if (img.isPng) {
               try {
                 outputDataUrl = PNG.insertMetadata(dataUrl, img.altText);
@@ -926,10 +1067,10 @@
             await new Promise(r => setTimeout(r, 150));
           }
 
-          showToast(`Downloaded ${imagesToProcess.length} images with metadata`);
+          showToast(t('downloadedImages', { count: imagesToProcess.length }));
         } catch (error) {
           console.error('Processing error:', error);
-          showToast('Error processing images');
+          showToast(t('errorProcessing'));
         } finally {
           setIsProcessing(false);
         }
@@ -952,8 +1093,24 @@
       return (
         <div className="app">
           <header>
-            <h1>Alt Text Editor</h1>
-            <p className="subtitle">Import images and Excel mapping to batch-edit alt text metadata</p>
+            <div className="header-content">
+              <h1>{t('title')}</h1>
+              <p className="subtitle">{t('subtitle')}</p>
+            </div>
+            <div className="language-selector">
+              <button
+                className={`language-btn ${language === 'fi' ? 'active' : ''}`}
+                onClick={() => changeLanguage('fi')}
+              >
+                Suomi
+              </button>
+              <button
+                className={`language-btn ${language === 'sv' ? 'active' : ''}`}
+                onClick={() => changeLanguage('sv')}
+              >
+                Svenska
+              </button>
+            </div>
           </header>
 
           <div className="upload-section">
@@ -967,11 +1124,11 @@
               <svg className="drop-zone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <div className="drop-zone-title">Images</div>
-              <p className="drop-zone-text"><strong>Click to upload</strong> or drag and drop</p>
-              <p className="drop-zone-hint">JPEG and PNG supported</p>
+              <div className="drop-zone-title">{t('imagesDropZone')}</div>
+              <p className="drop-zone-text"><strong>{t('clickToUpload')}</strong> {t('dragAndDrop')}</p>
+              <p className="drop-zone-hint">{t('jpegPngSupported')}</p>
               {images.length > 0 && (
-                <div className="drop-zone-status success">{images.length} images loaded</div>
+                <div className="drop-zone-status success">{images.length} {t('imagesLoaded')}</div>
               )}
               <input 
                 ref={imageInputRef}
@@ -993,13 +1150,13 @@
               <svg className="drop-zone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <div className="drop-zone-title">Excel / CSV</div>
-              <p className="drop-zone-text"><strong>Click to upload</strong> or drag and drop</p>
+              <div className="drop-zone-title">{t('excelDropZone')}</div>
+              <p className="drop-zone-text"><strong>{t('clickToUpload')}</strong> {t('dragAndDrop')}</p>
               <p className="drop-zone-hint">
-                Columns: filename, alt_text · <span className="template-link" onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}>Download template</span>
+                {t('columnsHint')} <span className="template-link" onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}>{t('downloadTemplate')}</span>
               </p>
               {excelData && (
-                <div className="drop-zone-status success">{excelFileName} ({excelData.rowCount} entries)</div>
+                <div className="drop-zone-status success">{excelFileName} ({excelData.rowCount} {t('entries')})</div>
               )}
               <input 
                 ref={excelInputRef}
@@ -1017,28 +1174,28 @@
                 <div className="match-stats">
                   <div className="stat-item">
                     <div className="stat-value total">{images.length}</div>
-                    <div className="stat-label">Images</div>
+                    <div className="stat-label">{t('images')}</div>
                   </div>
                   <div className="stat-item">
                     <div className="stat-value matched">{matchedCount}</div>
-                    <div className="stat-label">Matched</div>
+                    <div className="stat-label">{t('matched')}</div>
                   </div>
                   <div className="stat-item">
                     <div className="stat-value unmatched">{images.length - withAltTextCount}</div>
-                    <div className="stat-label">Missing alt text</div>
+                    <div className="stat-label">{t('missingAltText')}</div>
                   </div>
                 </div>
                 <div className="btn-group">
-                  <button className="btn btn-secondary btn-sm" onClick={clearAll}>Clear All</button>
+                  <button className="btn btn-secondary btn-sm" onClick={clearAll}>{t('clearAll')}</button>
                 </div>
               </div>
 
               <div className="images-table">
                 <div className="table-header">
-                  <div>Preview</div>
-                  <div>Filename</div>
-                  <div>Alt Text</div>
-                  <div>Status</div>
+                  <div>{t('preview')}</div>
+                  <div>{t('filename')}</div>
+                  <div>{t('altText')}</div>
+                  <div>{t('status')}</div>
                 </div>
                 {images.map(img => (
                   <div className="table-row" key={img.id}>
@@ -1049,14 +1206,14 @@
                         className="row-alttext-input"
                         value={img.altText}
                         onChange={(e) => updateAltText(img.id, e.target.value)}
-                        placeholder="Enter alt text..."
+                        placeholder={t('enterAltText')}
                         rows={2}
                       />
                     </div>
                     <div className="row-status">
                       <span className={`status-badge ${img.matchStatus}`}>
-                        {img.matchStatus === 'matched' ? 'Matched' : 
-                         img.matchStatus === 'manual' ? 'Manual' : 'No match'}
+                        {img.matchStatus === 'matched' ? t('statusMatched') :
+                         img.matchStatus === 'manual' ? t('statusManual') : t('statusNoMatch')}
                       </span>
                     </div>
                   </div>
@@ -1065,17 +1222,17 @@
 
               <div className="actions-bar">
                 <div className="info-text">
-                  {withAltTextCount} of {images.length} images have alt text
+                  {withAltTextCount} / {images.length} {t('haveAltText')}
                 </div>
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   onClick={processAndDownload}
                   disabled={withAltTextCount === 0}
                 >
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download All ({withAltTextCount})
+                  {t('downloadAll')} ({withAltTextCount})
                 </button>
               </div>
             </>
@@ -1083,7 +1240,7 @@
 
           {images.length === 0 && (
             <div className="empty-state">
-              <p>Upload images and an Excel file to get started.</p>
+              <p>{t('uploadToStart')}</p>
             </div>
           )}
 
@@ -1091,7 +1248,7 @@
             <div className="processing-overlay">
               <div className="processing-content">
                 <div className="spinner"></div>
-                <p>Processing images...</p>
+                <p>{t('processingImages')}</p>
               </div>
             </div>
           )}

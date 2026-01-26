@@ -638,6 +638,14 @@
       box-shadow: var(--shadow-md);
     }
 
+    .toast.warning {
+      background: var(--warning);
+    }
+
+    .toast.error {
+      background: var(--error);
+    }
+
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
@@ -705,7 +713,7 @@
         excelDropZone: 'Excel / CSV',
         clickToUpload: 'Klikkaa ladataksesi',
         dragAndDrop: 'tai vedä ja pudota',
-        jpegPngSupported: 'JPEG ja PNG tuettu',
+        jpegPngSupported: 'JPEG, PNG ja SVG tuettu (max 100MB)',
         imagesLoaded: 'kuvaa ladattu',
         columnsHint: 'Sarakkeet: filename, alt_text ·',
         downloadTemplate: 'Lataa pohja',
@@ -733,7 +741,9 @@
         errorProcessing: 'Virhe kuvien käsittelyssä',
         language: 'Kieli',
         darkMode: 'Tumma tila',
-        lightMode: 'Vaalea tila'
+        lightMode: 'Vaalea tila',
+        fileTooLarge: '{filename} on liian suuri ({size}MB). Maksimikoko on {maxSize}MB.',
+        someFilesSkipped: '{count} tiedostoa ohitettiin (liian suuret)'
       },
       sv: {
         title: 'Alternativ textredigerare',
@@ -742,7 +752,7 @@
         excelDropZone: 'Excel / CSV',
         clickToUpload: 'Klicka för att ladda upp',
         dragAndDrop: 'eller dra och släpp',
-        jpegPngSupported: 'JPEG och PNG stöds',
+        jpegPngSupported: 'JPEG, PNG och SVG stöds (max 100MB)',
         imagesLoaded: 'bilder laddade',
         columnsHint: 'Kolumner: filename, alt_text ·',
         downloadTemplate: 'Ladda ner mall',
@@ -770,14 +780,67 @@
         errorProcessing: 'Fel vid bearbetning av bilder',
         language: 'Språk',
         darkMode: 'Mörkt läge',
-        lightMode: 'Ljust läge'
+        lightMode: 'Ljust läge',
+        fileTooLarge: '{filename} är för stor ({size}MB). Maximal storlek är {maxSize}MB.',
+        someFilesSkipped: '{count} filer hoppades över (för stora)'
+      }
+    };
+
+    // ============================================
+    // SVG Metadata utilities
+    // ============================================
+
+    const SVG = {
+      insertMetadata(svgText, description) {
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(svgText, 'image/svg+xml');
+
+          // Check for parsing errors
+          const parserError = doc.querySelector('parsererror');
+          if (parserError) {
+            console.error('SVG parsing error:', parserError);
+            return svgText;
+          }
+
+          const svgElement = doc.documentElement;
+
+          // Remove existing title and desc elements
+          const existingTitle = svgElement.querySelector('title');
+          const existingDesc = svgElement.querySelector('desc');
+          if (existingTitle) existingTitle.remove();
+          if (existingDesc) existingDesc.remove();
+
+          // Create new title element
+          const titleElement = doc.createElementNS('http://www.w3.org/2000/svg', 'title');
+          titleElement.textContent = description;
+
+          // Create new desc element
+          const descElement = doc.createElementNS('http://www.w3.org/2000/svg', 'desc');
+          descElement.textContent = description;
+
+          // Insert as first children of svg element
+          svgElement.insertBefore(descElement, svgElement.firstChild);
+          svgElement.insertBefore(titleElement, svgElement.firstChild);
+
+          // Add aria-label for better accessibility
+          svgElement.setAttribute('aria-label', description);
+          svgElement.setAttribute('role', 'img');
+
+          // Serialize back to string
+          const serializer = new XMLSerializer();
+          return serializer.serializeToString(doc);
+        } catch (error) {
+          console.error('SVG metadata insertion error:', error);
+          return svgText;
+        }
       }
     };
 
     // ============================================
     // PNG Metadata utilities
     // ============================================
-    
+
     const PNG = {
       SIGNATURE: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
       crcTable: null,
@@ -1066,6 +1129,9 @@
     // React App
     // ============================================
 
+    // Maximum file size in bytes (100MB)
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
+
     function App() {
       const [images, setImages] = useState([]);
       const [excelData, setExcelData] = useState(null);
@@ -1144,8 +1210,8 @@
         return text;
       };
 
-      const showToast = (message) => {
-        setToast(message);
+      const showToast = (message, type = 'success') => {
+        setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
       };
 
@@ -1170,11 +1236,39 @@
       }, []);
 
       const handleImageFiles = useCallback((files) => {
-        const imageFiles = Array.from(files).filter(file => 
+        const imageFiles = Array.from(files).filter(file =>
           file.type.startsWith('image/')
         );
 
-        const newImages = imageFiles.map(file => ({
+        const validFiles = [];
+        const oversizedFiles = [];
+
+        imageFiles.forEach(file => {
+          if (file.size > MAX_FILE_SIZE) {
+            oversizedFiles.push(file);
+          } else {
+            validFiles.push(file);
+          }
+        });
+
+        // Show error for oversized files
+        if (oversizedFiles.length > 0) {
+          const maxSizeMB = Math.floor(MAX_FILE_SIZE / (1024 * 1024));
+
+          if (oversizedFiles.length === 1) {
+            const file = oversizedFiles[0];
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            showToast(t('fileTooLarge', {
+              filename: file.name,
+              size: sizeMB,
+              maxSize: maxSizeMB
+            }), 'warning');
+          } else {
+            showToast(t('someFilesSkipped', { count: oversizedFiles.length }), 'warning');
+          }
+        }
+
+        const newImages = validFiles.map(file => ({
           id: crypto.randomUUID(),
           file,
           name: file.name,
@@ -1182,14 +1276,15 @@
           altText: '',
           matchStatus: 'unmatched',
           isJpeg: file.type === 'image/jpeg' || file.name.toLowerCase().match(/\.jpe?g$/),
-          isPng: file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
+          isPng: file.type === 'image/png' || file.name.toLowerCase().endsWith('.png'),
+          isSvg: file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
         }));
 
         setImages(prev => {
           const combined = [...prev, ...newImages];
           return excelData ? matchImagesWithExcel(combined, excelData) : combined;
         });
-      }, [excelData, matchImagesWithExcel]);
+      }, [excelData, matchImagesWithExcel, language]);
 
       const handleExcelFile = useCallback(async (file) => {
         try {
@@ -1249,8 +1344,17 @@
         });
       };
 
+      const readFileAsText = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      };
+
       const processAndDownload = async () => {
-        const imagesToProcess = images.filter(img => img.altText && (img.isJpeg || img.isPng));
+        const imagesToProcess = images.filter(img => img.altText && (img.isJpeg || img.isPng || img.isSvg));
         if (imagesToProcess.length === 0) {
           showToast(t('noImagesToProcess'));
           return;
@@ -1260,10 +1364,30 @@
 
         try {
           for (const img of imagesToProcess) {
-            let dataUrl = await readFileAsDataURL(img.file);
-            let outputDataUrl = dataUrl;
+            if (img.isSvg) {
+              // Handle SVG files
+              try {
+                const svgText = await readFileAsText(img.file);
+                const modifiedSvg = SVG.insertMetadata(svgText, img.altText);
+                const blob = new Blob([modifiedSvg], { type: 'image/svg+xml' });
+                const outputUrl = URL.createObjectURL(blob);
 
-            if (img.isJpeg) {
+                const link = document.createElement('a');
+                link.href = outputUrl;
+                link.download = img.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(outputUrl);
+              } catch (error) {
+                console.error('SVG metadata error:', error);
+              }
+            } else {
+              // Handle JPEG and PNG files
+              let dataUrl = await readFileAsDataURL(img.file);
+              let outputDataUrl = dataUrl;
+
+              if (img.isJpeg) {
               try {
                 let exifObj;
                 try { exifObj = piexif.load(dataUrl); }
@@ -1292,20 +1416,21 @@
               }
             }
 
-            if (img.isPng) {
-              try {
-                outputDataUrl = PNG.insertMetadata(dataUrl, img.altText);
-              } catch (error) {
-                console.error('PNG metadata error:', error);
+              if (img.isPng) {
+                try {
+                  outputDataUrl = PNG.insertMetadata(dataUrl, img.altText);
+                } catch (error) {
+                  console.error('PNG metadata error:', error);
+                }
               }
-            }
 
-            const link = document.createElement('a');
-            link.href = outputDataUrl;
-            link.download = img.name;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+              const link = document.createElement('a');
+              link.href = outputDataUrl;
+              link.download = img.name;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
 
             await new Promise(r => setTimeout(r, 150));
           }
@@ -1392,11 +1517,11 @@
               {images.length > 0 && (
                 <div className="drop-zone-status success">{images.length} {t('imagesLoaded')}</div>
               )}
-              <input 
+              <input
                 ref={imageInputRef}
-                type="file" 
-                accept="image/jpeg,image/png,.jpg,.jpeg,.png" 
-                multiple 
+                type="file"
+                accept="image/jpeg,image/png,image/svg+xml,.jpg,.jpeg,.png,.svg"
+                multiple
                 onChange={(e) => { handleImageFiles(e.target.files); e.target.value = ''; }}
                 style={{ display: 'none' }}
               />
@@ -1516,11 +1641,21 @@
           )}
 
           {toast && (
-            <div className="toast">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-              {toast}
+            <div className={`toast ${toast.type || 'success'}`}>
+              {toast.type === 'warning' ? (
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              ) : toast.type === 'error' ? (
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {toast.message}
             </div>
           )}
         </div>

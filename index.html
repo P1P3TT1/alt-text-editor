@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alt Text Editor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --nova-primary: #4930EB;
+      --nova-primary-hover: #3a26c2;
+      --nova-primary-light: rgba(73, 48, 235, 0.08);
+      --nova-base: #1F1F1F;
+      --nova-secondary: #545776;
+      --nova-success: #056425;
+      --nova-error: #983D23;
+      --nova-alert: #86560F;
+      --bg-page: #FAFAFA;
+      --bg-card: #FFFFFF;
+      --border-color: #E5E5E5;
+      --border-input: #D1D1D1;
+      --text-primary: var(--nova-base);
+      --text-secondary: var(--nova-secondary);
+      --text-muted: #8E8E93;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 52px;
+      --radius-card: 8px;
+      --radius-input: 2px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--spacing-xl) var(--spacing-lg);
+    }
+
+    header {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    .upload-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-card);
+      padding: var(--spacing-lg);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: var(--bg-card);
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drop-zone:hover, .drop-zone.dragging {
+      border-color: var(--nova-primary);
+      background: var(--nova-primary-light);
+    }
+
+    .drop-zone.has-content {
+      border-style: solid;
+      border-color: var(--nova-success);
+      background: rgba(5, 100, 37, 0.05);
+    }
+
+    .drop-zone-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: var(--spacing-sm);
+      color: var(--nova-secondary);
+    }
+
+    .drop-zone.has-content .drop-zone-icon {
+      color: var(--nova-success);
+    }
+
+    .drop-zone-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .drop-zone-text {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .drop-zone-text strong {
+      color: var(--nova-primary);
+    }
+
+    .drop-zone-hint {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: var(--spacing-sm);
+    }
+
+    .drop-zone-status {
+      margin-top: var(--spacing-sm);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .drop-zone-status.success {
+      color: var(--nova-success);
+    }
+
+    .match-summary {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .match-stats {
+      display: flex;
+      gap: var(--spacing-xl);
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.matched { color: var(--nova-success); }
+    .stat-value.unmatched { color: var(--nova-alert); }
+    .stat-value.total { color: var(--nova-primary); }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .images-table {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .table-header {
+      display: grid;
+      grid-template-columns: 80px 1fr 2fr 100px;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: var(--bg-page);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 2fr 100px;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-bottom: 1px solid var(--border-color);
+      align-items: center;
+    }
+
+    .table-row:last-child {
+      border-bottom: none;
+    }
+
+    .table-row:hover {
+      background: var(--bg-page);
+    }
+
+    .row-thumbnail {
+      width: 64px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: var(--bg-page);
+    }
+
+    .row-filename {
+      font-size: 14px;
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .row-alttext {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .row-alttext.empty {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .row-alttext-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-input);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+    }
+
+    .row-alttext-input:focus {
+      outline: none;
+      border-color: var(--nova-primary);
+    }
+
+    .row-status {
+      text-align: center;
+    }
+
+    .status-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .status-badge.matched {
+      background: rgba(5, 100, 37, 0.1);
+      color: var(--nova-success);
+    }
+
+    .status-badge.unmatched {
+      background: rgba(134, 86, 15, 0.1);
+      color: var(--nova-alert);
+    }
+
+    .status-badge.manual {
+      background: rgba(73, 48, 235, 0.1);
+      color: var(--nova-primary);
+    }
+
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--spacing-lg);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: var(--spacing-md);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius-input);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .btn-primary {
+      background: var(--nova-primary);
+      color: white;
+      border: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--nova-primary-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-input);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--nova-secondary);
+      color: var(--text-primary);
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-xl);
+      color: var(--text-muted);
+    }
+
+    .excel-preview {
+      margin-top: var(--spacing-sm);
+      font-size: 12px;
+      color: var(--text-muted);
+      max-height: 60px;
+      overflow: hidden;
+    }
+
+    .processing-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(31, 31, 31, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .processing-content {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      padding: var(--spacing-xl);
+      text-align: center;
+      min-width: 240px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--nova-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto var(--spacing-md);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      right: var(--spacing-lg);
+      background: var(--nova-success);
+      color: white;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: var(--radius-card);
+      font-weight: 500;
+      font-size: 14px;
+      animation: slideIn 0.2s ease;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .info-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .template-link {
+      color: var(--nova-primary);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .template-link:hover {
+      color: var(--nova-primary-hover);
+    }
+
+    @media (max-width: 900px) {
+      .upload-section {
+        grid-template-columns: 1fr;
+      }
+
+      .table-header, .table-row {
+        grid-template-columns: 60px 1fr 100px;
+      }
+
+      .table-header > *:nth-child(3),
+      .table-row > *:nth-child(3) {
+        display: none;
+      }
+
+      .match-stats {
+        gap: var(--spacing-lg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useCallback } = React;
+
+    // ============================================
+    // PNG Metadata utilities
+    // ============================================
+    
+    const PNG = {
+      SIGNATURE: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+      crcTable: null,
+      
+      makeCRCTable() {
+        if (this.crcTable) return this.crcTable;
+        this.crcTable = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+          let c = n;
+          for (let k = 0; k < 8; k++) {
+            c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+          }
+          this.crcTable[n] = c;
+        }
+        return this.crcTable;
+      },
+      
+      crc32(bytes) {
+        const table = this.makeCRCTable();
+        let crc = 0xFFFFFFFF;
+        for (let i = 0; i < bytes.length; i++) {
+          crc = table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+        }
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+      },
+      
+      createITXtChunk(keyword, text) {
+        const keywordBytes = new TextEncoder().encode(keyword);
+        const textBytes = new TextEncoder().encode(text);
+        const data = [...keywordBytes, 0x00, 0x00, 0x00, 0x00, 0x00, ...textBytes];
+        return this.createChunk('iTXt', data);
+      },
+      
+      createXMPChunk(description) {
+        const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:description><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></dc:description>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`;
+        return this.createITXtChunk('XML:com.adobe.xmp', xmp);
+      },
+      
+      escapeXML(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      },
+      
+      createChunk(type, data) {
+        const typeBytes = new TextEncoder().encode(type);
+        const length = data.length;
+        const lengthBytes = [(length >> 24) & 0xFF, (length >> 16) & 0xFF, (length >> 8) & 0xFF, length & 0xFF];
+        const crc = this.crc32([...typeBytes, ...data]);
+        const crcBytes = [(crc >> 24) & 0xFF, (crc >> 16) & 0xFF, (crc >> 8) & 0xFF, crc & 0xFF];
+        return [...lengthBytes, ...typeBytes, ...data, ...crcBytes];
+      },
+      
+      insertMetadata(pngDataUrl, description) {
+        const base64 = pngDataUrl.split(',')[1];
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+        
+        for (let i = 0; i < 8; i++) if (bytes[i] !== this.SIGNATURE[i]) return pngDataUrl;
+        
+        const descChunk = this.createITXtChunk('Description', description);
+        const xmpChunk = this.createXMPChunk(description);
+        
+        let pos = 8;
+        const ihdrLength = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
+        const insertPos = pos + 12 + ihdrLength;
+        
+        const output = [];
+        for (let i = 0; i < insertPos; i++) output.push(bytes[i]);
+        output.push(...descChunk, ...xmpChunk);
+        
+        pos = insertPos;
+        while (pos < bytes.length - 12) {
+          const length = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
+          const type = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]);
+          const chunkEnd = pos + 12 + length;
+          
+          if (type === 'iTXt') {
+            const dataStart = pos + 8;
+            let keywordEnd = dataStart;
+            while (keywordEnd < dataStart + length && bytes[keywordEnd] !== 0) keywordEnd++;
+            const keyword = new TextDecoder().decode(bytes.slice(dataStart, keywordEnd));
+            if (keyword === 'Description' || keyword === 'XML:com.adobe.xmp') { pos = chunkEnd; continue; }
+          }
+          
+          for (let i = pos; i < chunkEnd; i++) output.push(bytes[i]);
+          pos = chunkEnd;
+          if (type === 'IEND') break;
+        }
+        
+        const outputArray = new Uint8Array(output);
+        let binary = '';
+        for (let i = 0; i < outputArray.length; i++) binary += String.fromCharCode(outputArray[i]);
+        return 'data:image/png;base64,' + btoa(binary);
+      }
+    };
+
+    // ============================================
+    // IPTC utilities
+    // ============================================
+    
+    const IPTC = {
+      MARKER: 0x1C,
+      RECORD_APP: 2,
+      CAPTION: 120,
+      
+      stringToBytes(str) {
+        return Array.from(new TextEncoder().encode(str));
+      },
+      
+      createDataset(record, dataset, value) {
+        const valueBytes = this.stringToBytes(value);
+        const length = valueBytes.length;
+        const result = [this.MARKER, record, dataset, (length >> 8) & 0xFF, length & 0xFF, ...valueBytes];
+        return result;
+      },
+      
+      createIPTCBlock(caption) {
+        return caption ? this.createDataset(this.RECORD_APP, this.CAPTION, caption) : [];
+      },
+      
+      createPhotoshopIPTCResource(iptcData) {
+        const signature = [0x38, 0x42, 0x49, 0x4D];
+        const resourceId = [0x04, 0x04];
+        const name = [0x00, 0x00];
+        const size = iptcData.length;
+        const sizeBytes = [(size >> 24) & 0xFF, (size >> 16) & 0xFF, (size >> 8) & 0xFF, size & 0xFF];
+        const resource = [...signature, ...resourceId, ...name, ...sizeBytes, ...iptcData];
+        if (resource.length % 2 !== 0) resource.push(0x00);
+        return resource;
+      },
+      
+      createAPP13Segment(caption) {
+        const iptcData = this.createIPTCBlock(caption);
+        if (iptcData.length === 0) return null;
+        const photoshopResource = this.createPhotoshopIPTCResource(iptcData);
+        const identifier = [0x50, 0x68, 0x6F, 0x74, 0x6F, 0x73, 0x68, 0x6F, 0x70, 0x20, 0x33, 0x2E, 0x30, 0x00];
+        const content = [...identifier, ...photoshopResource];
+        const length = content.length + 2;
+        return [0xFF, 0xED, (length >> 8) & 0xFF, length & 0xFF, ...content];
+      }
+    };
+
+    function insertIPTCIntoJPEG(jpegDataUrl, caption) {
+      const base64 = jpegDataUrl.split(',')[1];
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+      
+      const app13 = IPTC.createAPP13Segment(caption);
+      if (!app13) return jpegDataUrl;
+      
+      const outputParts = [[bytes[0], bytes[1]]];
+      let i = 2;
+      
+      while (i < bytes.length - 1) {
+        if (bytes[i] !== 0xFF) { outputParts.push(Array.from(bytes.slice(i))); break; }
+        const marker = bytes[i + 1];
+        if (marker === 0xD8) { i += 2; continue; }
+        if (marker === 0xD9 || marker === 0xDA) { outputParts.push(app13); outputParts.push(Array.from(bytes.slice(i))); break; }
+        
+        if ((marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE || marker === 0xDB || marker === 0xC0 || marker === 0xC2 || marker === 0xC4) {
+          const segmentLength = (bytes[i + 2] << 8) | bytes[i + 3];
+          if (marker === 0xED) { i += 2 + segmentLength; continue; }
+          if (marker === 0xE0 || marker === 0xE1) {
+            outputParts.push(Array.from(bytes.slice(i, i + 2 + segmentLength)));
+            i += 2 + segmentLength;
+            continue;
+          }
+          if (!outputParts.some(p => p.length > 2 && p[0] === 0xFF && p[1] === 0xED)) outputParts.push(app13);
+          outputParts.push(Array.from(bytes.slice(i, i + 2 + segmentLength)));
+          i += 2 + segmentLength;
+        } else { i++; }
+      }
+      
+      if (!outputParts.some(p => p.length > 2 && p[0] === 0xFF && p[1] === 0xED)) outputParts.splice(1, 0, app13);
+      
+      const output = outputParts.flat();
+      const outputArray = new Uint8Array(output);
+      let binary = '';
+      for (let i = 0; i < outputArray.length; i++) binary += String.fromCharCode(outputArray[i]);
+      return 'data:image/jpeg;base64,' + btoa(binary);
+    }
+
+    // ============================================
+    // Excel utilities
+    // ============================================
+    
+    function parseExcelFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            // Find header row and column indices
+            const headers = jsonData[0]?.map(h => String(h).toLowerCase().trim()) || [];
+            
+            // Look for filename column
+            const filenameIdx = headers.findIndex(h => 
+              h.includes('filename') || h.includes('file') || h.includes('name') || 
+              h.includes('kuva') || h.includes('tiedosto') || h === 'image'
+            );
+            
+            // Look for alt text column
+            const altTextIdx = headers.findIndex(h => 
+              h.includes('alt') || h.includes('description') || h.includes('kuvaus') || 
+              h.includes('caption') || h.includes('teksti') || h.includes('text')
+            );
+            
+            if (filenameIdx === -1) {
+              // Try to auto-detect: first column = filename, second = alt text
+              if (jsonData.length > 1 && jsonData[0].length >= 2) {
+                const mapping = {};
+                for (let i = 0; i < jsonData.length; i++) {
+                  const row = jsonData[i];
+                  if (row[0] && row[1]) {
+                    const filename = String(row[0]).trim();
+                    const altText = String(row[1]).trim();
+                    if (filename && altText) mapping[filename] = altText;
+                  }
+                }
+                resolve({ mapping, rowCount: Object.keys(mapping).length });
+                return;
+              }
+              reject(new Error('Could not find filename column'));
+              return;
+            }
+            
+            const altIdx = altTextIdx !== -1 ? altTextIdx : (filenameIdx === 0 ? 1 : 0);
+            
+            const mapping = {};
+            for (let i = 1; i < jsonData.length; i++) {
+              const row = jsonData[i];
+              if (row[filenameIdx] && row[altIdx]) {
+                const filename = String(row[filenameIdx]).trim();
+                const altText = String(row[altIdx]).trim();
+                if (filename && altText) mapping[filename] = altText;
+              }
+            }
+            
+            resolve({ mapping, rowCount: Object.keys(mapping).length, headers: jsonData[0] });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function normalizeFilename(filename) {
+      // Remove path, lowercase, trim
+      return filename.split(/[/\\]/).pop().toLowerCase().trim();
+    }
+
+    function matchFilenames(imageFilename, excelFilenames) {
+      const normalizedImage = normalizeFilename(imageFilename);
+      
+      // Exact match
+      for (const excelName of excelFilenames) {
+        if (normalizeFilename(excelName) === normalizedImage) return excelName;
+      }
+      
+      // Match without extension
+      const imageBase = normalizedImage.replace(/\.[^.]+$/, '');
+      for (const excelName of excelFilenames) {
+        const excelBase = normalizeFilename(excelName).replace(/\.[^.]+$/, '');
+        if (excelBase === imageBase) return excelName;
+      }
+      
+      return null;
+    }
+
+    // ============================================
+    // React App
+    // ============================================
+
+    function App() {
+      const [images, setImages] = useState([]);
+      const [excelData, setExcelData] = useState(null);
+      const [excelFileName, setExcelFileName] = useState('');
+      const [isDraggingImages, setIsDraggingImages] = useState(false);
+      const [isDraggingExcel, setIsDraggingExcel] = useState(false);
+      const [isProcessing, setIsProcessing] = useState(false);
+      const [toast, setToast] = useState(null);
+      
+      const imageInputRef = useRef(null);
+      const excelInputRef = useRef(null);
+
+      const showToast = (message) => {
+        setToast(message);
+        setTimeout(() => setToast(null), 3000);
+      };
+
+      // Match images with Excel data when either changes
+      const matchImagesWithExcel = useCallback((imageList, excel) => {
+        if (!excel?.mapping) return imageList;
+        
+        const excelFilenames = Object.keys(excel.mapping);
+        
+        return imageList.map(img => {
+          const matchedKey = matchFilenames(img.name, excelFilenames);
+          if (matchedKey) {
+            return {
+              ...img,
+              altText: excel.mapping[matchedKey],
+              matchStatus: 'matched',
+              matchedFrom: matchedKey
+            };
+          }
+          return { ...img, matchStatus: img.altText ? 'manual' : 'unmatched' };
+        });
+      }, []);
+
+      const handleImageFiles = useCallback((files) => {
+        const imageFiles = Array.from(files).filter(file => 
+          file.type.startsWith('image/')
+        );
+
+        const newImages = imageFiles.map(file => ({
+          id: crypto.randomUUID(),
+          file,
+          name: file.name,
+          preview: URL.createObjectURL(file),
+          altText: '',
+          matchStatus: 'unmatched',
+          isJpeg: file.type === 'image/jpeg' || file.name.toLowerCase().match(/\.jpe?g$/),
+          isPng: file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
+        }));
+
+        setImages(prev => {
+          const combined = [...prev, ...newImages];
+          return excelData ? matchImagesWithExcel(combined, excelData) : combined;
+        });
+      }, [excelData, matchImagesWithExcel]);
+
+      const handleExcelFile = useCallback(async (file) => {
+        try {
+          const result = await parseExcelFile(file);
+          setExcelData(result);
+          setExcelFileName(file.name);
+          setImages(prev => matchImagesWithExcel(prev, result));
+          showToast(`Loaded ${result.rowCount} entries from Excel`);
+        } catch (err) {
+          console.error('Excel parse error:', err);
+          showToast('Error parsing Excel file');
+        }
+      }, [matchImagesWithExcel]);
+
+      const handleImageDrop = useCallback((e) => {
+        e.preventDefault();
+        setIsDraggingImages(false);
+        handleImageFiles(e.dataTransfer.files);
+      }, [handleImageFiles]);
+
+      const handleExcelDrop = useCallback((e) => {
+        e.preventDefault();
+        setIsDraggingExcel(false);
+        const file = Array.from(e.dataTransfer.files).find(f => 
+          f.name.match(/\.(xlsx?|csv)$/i)
+        );
+        if (file) handleExcelFile(file);
+      }, [handleExcelFile]);
+
+      const updateAltText = (id, altText) => {
+        setImages(prev => prev.map(img => 
+          img.id === id ? { ...img, altText, matchStatus: altText ? 'manual' : 'unmatched' } : img
+        ));
+      };
+
+      const removeImage = (id) => {
+        setImages(prev => {
+          const img = prev.find(i => i.id === id);
+          if (img) URL.revokeObjectURL(img.preview);
+          return prev.filter(i => i.id !== id);
+        });
+      };
+
+      const clearAll = () => {
+        images.forEach(img => URL.revokeObjectURL(img.preview));
+        setImages([]);
+        setExcelData(null);
+        setExcelFileName('');
+      };
+
+      const readFileAsDataURL = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+
+      const processAndDownload = async () => {
+        const imagesToProcess = images.filter(img => img.altText && (img.isJpeg || img.isPng));
+        if (imagesToProcess.length === 0) {
+          showToast('No images with alt text to process');
+          return;
+        }
+        
+        setIsProcessing(true);
+
+        try {
+          for (const img of imagesToProcess) {
+            let dataUrl = await readFileAsDataURL(img.file);
+            let outputDataUrl = dataUrl;
+
+            if (img.isJpeg) {
+              try {
+                let exifObj;
+                try { exifObj = piexif.load(dataUrl); } 
+                catch { exifObj = { "0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "Interop": {}, "thumbnail": null }; }
+
+                exifObj["0th"][piexif.ImageIFD.ImageDescription] = img.altText;
+                
+                const utf16Encode = (str) => {
+                  const arr = [];
+                  for (let i = 0; i < str.length; i++) {
+                    arr.push(str.charCodeAt(i) & 0xFF);
+                    arr.push((str.charCodeAt(i) >> 8) & 0xFF);
+                  }
+                  arr.push(0, 0);
+                  return arr;
+                };
+                
+                exifObj["0th"][piexif.ImageIFD.XPComment] = utf16Encode(img.altText);
+                exifObj["0th"][piexif.ImageIFD.XPSubject] = utf16Encode(img.altText);
+
+                const exifBytes = piexif.dump(exifObj);
+                outputDataUrl = piexif.insert(exifBytes, dataUrl);
+                outputDataUrl = insertIPTCIntoJPEG(outputDataUrl, img.altText);
+              } catch (error) {
+                console.error('JPEG metadata error:', error);
+              }
+            }
+            
+            if (img.isPng) {
+              try {
+                outputDataUrl = PNG.insertMetadata(dataUrl, img.altText);
+              } catch (error) {
+                console.error('PNG metadata error:', error);
+              }
+            }
+
+            const link = document.createElement('a');
+            link.href = outputDataUrl;
+            link.download = img.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            await new Promise(r => setTimeout(r, 150));
+          }
+
+          showToast(`Downloaded ${imagesToProcess.length} images with metadata`);
+        } catch (error) {
+          console.error('Processing error:', error);
+          showToast('Error processing images');
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+
+      const downloadTemplate = () => {
+        const ws = XLSX.utils.aoa_to_sheet([
+          ['filename', 'alt_text'],
+          ['example.jpg', 'Description of the image'],
+          ['photo.png', 'Another image description']
+        ]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Alt Texts');
+        XLSX.writeFile(wb, 'alt-text-template.xlsx');
+      };
+
+      const matchedCount = images.filter(img => img.matchStatus === 'matched').length;
+      const withAltTextCount = images.filter(img => img.altText).length;
+
+      return (
+        <div className="app">
+          <header>
+            <h1>Alt Text Editor</h1>
+            <p className="subtitle">Import images and Excel mapping to batch-edit alt text metadata</p>
+          </header>
+
+          <div className="upload-section">
+            <div 
+              className={`drop-zone ${isDraggingImages ? 'dragging' : ''} ${images.length > 0 ? 'has-content' : ''}`}
+              onDrop={handleImageDrop}
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingImages(true); }}
+              onDragLeave={() => setIsDraggingImages(false)}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <svg className="drop-zone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <div className="drop-zone-title">Images</div>
+              <p className="drop-zone-text"><strong>Click to upload</strong> or drag and drop</p>
+              <p className="drop-zone-hint">JPEG and PNG supported</p>
+              {images.length > 0 && (
+                <div className="drop-zone-status success">{images.length} images loaded</div>
+              )}
+              <input 
+                ref={imageInputRef}
+                type="file" 
+                accept="image/jpeg,image/png,.jpg,.jpeg,.png" 
+                multiple 
+                onChange={(e) => { handleImageFiles(e.target.files); e.target.value = ''; }}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            <div 
+              className={`drop-zone ${isDraggingExcel ? 'dragging' : ''} ${excelData ? 'has-content' : ''}`}
+              onDrop={handleExcelDrop}
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingExcel(true); }}
+              onDragLeave={() => setIsDraggingExcel(false)}
+              onClick={() => excelInputRef.current?.click()}
+            >
+              <svg className="drop-zone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <div className="drop-zone-title">Excel / CSV</div>
+              <p className="drop-zone-text"><strong>Click to upload</strong> or drag and drop</p>
+              <p className="drop-zone-hint">
+                Columns: filename, alt_text · <span className="template-link" onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}>Download template</span>
+              </p>
+              {excelData && (
+                <div className="drop-zone-status success">{excelFileName} ({excelData.rowCount} entries)</div>
+              )}
+              <input 
+                ref={excelInputRef}
+                type="file" 
+                accept=".xlsx,.xls,.csv" 
+                onChange={(e) => { if (e.target.files[0]) handleExcelFile(e.target.files[0]); e.target.value = ''; }}
+                style={{ display: 'none' }}
+              />
+            </div>
+          </div>
+
+          {images.length > 0 && (
+            <>
+              <div className="match-summary">
+                <div className="match-stats">
+                  <div className="stat-item">
+                    <div className="stat-value total">{images.length}</div>
+                    <div className="stat-label">Images</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value matched">{matchedCount}</div>
+                    <div className="stat-label">Matched</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value unmatched">{images.length - withAltTextCount}</div>
+                    <div className="stat-label">Missing alt text</div>
+                  </div>
+                </div>
+                <div className="btn-group">
+                  <button className="btn btn-secondary btn-sm" onClick={clearAll}>Clear All</button>
+                </div>
+              </div>
+
+              <div className="images-table">
+                <div className="table-header">
+                  <div>Preview</div>
+                  <div>Filename</div>
+                  <div>Alt Text</div>
+                  <div>Status</div>
+                </div>
+                {images.map(img => (
+                  <div className="table-row" key={img.id}>
+                    <img className="row-thumbnail" src={img.preview} alt="" />
+                    <div className="row-filename">{img.name}</div>
+                    <div>
+                      <textarea
+                        className="row-alttext-input"
+                        value={img.altText}
+                        onChange={(e) => updateAltText(img.id, e.target.value)}
+                        placeholder="Enter alt text..."
+                        rows={2}
+                      />
+                    </div>
+                    <div className="row-status">
+                      <span className={`status-badge ${img.matchStatus}`}>
+                        {img.matchStatus === 'matched' ? 'Matched' : 
+                         img.matchStatus === 'manual' ? 'Manual' : 'No match'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="actions-bar">
+                <div className="info-text">
+                  {withAltTextCount} of {images.length} images have alt text
+                </div>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={processAndDownload}
+                  disabled={withAltTextCount === 0}
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download All ({withAltTextCount})
+                </button>
+              </div>
+            </>
+          )}
+
+          {images.length === 0 && (
+            <div className="empty-state">
+              <p>Upload images and an Excel file to get started.</p>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className="processing-overlay">
+              <div className="processing-content">
+                <div className="spinner"></div>
+                <p>Processing images...</p>
+              </div>
+            </div>
+          )}
+
+          {toast && (
+            <div className="toast">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              {toast}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

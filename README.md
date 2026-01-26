@@ -50,7 +50,6 @@ The app auto-detects columns. Also recognizes: `file`, `name`, `image`, `descrip
 1. Fork or clone this repository
 2. Go to Settings → Pages
 3. Set source to `main` branch, `/ (root)`
-4. Access at `https://USERNAME.github.io/REPO-NAME/`
 
 ## Local Development
 

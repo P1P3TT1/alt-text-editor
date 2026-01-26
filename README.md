@@ -1,4 +1,4 @@
-# Alt Text Editor
+# (a work in progress) Alt Text Editor
 
 A browser-based tool for batch-editing image metadata (alt text). Upload images and an Excel file with filename-to-alt-text mappings, and download images with embedded metadata.
 

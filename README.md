@@ -11,7 +11,7 @@ A browser-based tool for batch-editing image metadata (alt text). Upload images 
 - **100% client-side** – No data leaves your browser
 - **JPEG, PNG & SVG support** – Full metadata embedding for all three formats
 - **Bilingual interface** – Finnish and Swedish languages with persistent preference
-- **Dark mode** – Automatic theme detection with manual toggle (Ctrl+Shift+T)
+- **Dark mode** – Automatic theme detection with manual toggle (Ctrl+Shift+D)
 
 ## Quick Start
 
@@ -57,7 +57,7 @@ The app auto-detects columns. Recognizes English, Finnish, and Swedish headers:
 **Dark Mode:**
 - Automatic detection of system color scheme preference
 - Manual toggle button in header
-- Keyboard shortcut: `Ctrl+Shift+T` (or `Cmd+Shift+T` on Mac)
+- Keyboard shortcut: `Ctrl+Shift+D` (or `Cmd+Shift+T` on Mac)
 - Theme preference persists across sessions
 
 **File Validation:**

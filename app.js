@@ -562,10 +562,10 @@ function App() {
     document.documentElement.setAttribute('lang', language);
   }, [language]);
 
-  // Keyboard shortcut for theme toggle (Ctrl+Shift+T or Cmd+Shift+T)
+  // Keyboard shortcut for theme toggle (Ctrl+Shift+D or Cmd+Shift+D)
   React.useEffect(() => {
     const handleKeyboard = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         toggleTheme();
       }

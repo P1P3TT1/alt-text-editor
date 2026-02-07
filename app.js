@@ -416,6 +416,132 @@ function insertIPTCIntoJPEG(jpegDataUrl, caption) {
 }
 
 // ============================================
+// Metadata reading utilities
+// ============================================
+
+function extractDescriptionFromXMP(xmpString) {
+  const match = xmpString.match(/<rdf:li[^>]*xml:lang="x-default"[^>]*>([\s\S]*?)<\/rdf:li>/);
+  if (!match) return null;
+  return match[1]
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"');
+}
+
+function readJPEGAltText(bytes) {
+  if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return null;
+  const namespace = 'http://ns.adobe.com/xap/1.0/\0';
+  const nsBytes = new TextEncoder().encode(namespace);
+
+  let i = 2;
+  while (i < bytes.length - 1) {
+    if (bytes[i] !== 0xFF) break;
+    const marker = bytes[i + 1];
+    if (marker === 0xD9 || marker === 0xDA) break;
+
+    if ((marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE || marker === 0xDB || marker === 0xC0 || marker === 0xC2 || marker === 0xC4) {
+      const segmentLength = (bytes[i + 2] << 8) | bytes[i + 3];
+
+      if (marker === 0xE1 && segmentLength > nsBytes.length + 2) {
+        let isXMP = true;
+        for (let j = 0; j < nsBytes.length; j++) {
+          if (bytes[i + 4 + j] !== nsBytes[j]) { isXMP = false; break; }
+        }
+        if (isXMP) {
+          const xmpText = new TextDecoder().decode(bytes.slice(i + 4 + nsBytes.length, i + 2 + segmentLength));
+          const desc = extractDescriptionFromXMP(xmpText);
+          if (desc) return desc;
+        }
+      }
+
+      i += 2 + segmentLength;
+    } else { i++; }
+  }
+  return null;
+}
+
+function readPNGAltText(bytes) {
+  for (let i = 0; i < 8; i++) {
+    if (bytes[i] !== PNG.SIGNATURE[i]) return null;
+  }
+
+  let pos = 8;
+  while (pos < bytes.length - 12) {
+    const length = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
+    const type = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]);
+
+    if (type === 'iTXt') {
+      const dataStart = pos + 8;
+      let keywordEnd = dataStart;
+      while (keywordEnd < dataStart + length && bytes[keywordEnd] !== 0) keywordEnd++;
+      const keyword = new TextDecoder().decode(bytes.slice(dataStart, keywordEnd));
+
+      if (keyword === 'XML:com.adobe.xmp') {
+        let offset = keywordEnd + 1; // past null terminator
+        offset += 2; // compression flag + compression method
+        while (offset < dataStart + length && bytes[offset] !== 0) offset++;
+        offset++; // past language tag null
+        while (offset < dataStart + length && bytes[offset] !== 0) offset++;
+        offset++; // past translated keyword null
+
+        const xmpText = new TextDecoder().decode(bytes.slice(offset, dataStart + length));
+        const desc = extractDescriptionFromXMP(xmpText);
+        if (desc) return desc;
+      }
+    }
+
+    pos += 12 + length;
+    if (type === 'IEND') break;
+  }
+  return null;
+}
+
+function readSVGAltText(svgText) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+    if (doc.querySelector('parsererror')) return null;
+    const title = doc.documentElement.querySelector('title');
+    return title?.textContent || null;
+  } catch {
+    return null;
+  }
+}
+
+async function readExistingAltText(file) {
+  try {
+    if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+      const text = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+      return readSVGAltText(text);
+    }
+
+    const buffer = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+    const bytes = new Uint8Array(buffer);
+
+    if (file.type === 'image/jpeg' || file.name.toLowerCase().match(/\.jpe?g$/)) {
+      return readJPEGAltText(bytes);
+    }
+    if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
+      return readPNGAltText(bytes);
+    }
+  } catch (error) {
+    console.error('Error reading metadata from', file.name, error);
+  }
+  return null;
+}
+
+// ============================================
 // Excel utilities
 // ============================================
 
@@ -606,7 +732,7 @@ function App() {
     });
   }, []);
 
-  const handleImageFiles = useCallback((files) => {
+  const handleImageFiles = useCallback(async (files) => {
     const imageFiles = Array.from(files).filter(file =>
       file.type.startsWith('image/')
     );
@@ -639,16 +765,19 @@ function App() {
       }
     }
 
-    const newImages = validFiles.map(file => ({
-      id: crypto.randomUUID(),
-      file,
-      name: file.name,
-      preview: URL.createObjectURL(file),
-      altText: '',
-      matchStatus: 'unmatched',
-      isJpeg: file.type === 'image/jpeg' || file.name.toLowerCase().match(/\.jpe?g$/),
-      isPng: file.type === 'image/png' || file.name.toLowerCase().endsWith('.png'),
-      isSvg: file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+    const newImages = await Promise.all(validFiles.map(async (file) => {
+      const existingAltText = await readExistingAltText(file) || '';
+      return {
+        id: crypto.randomUUID(),
+        file,
+        name: file.name,
+        preview: URL.createObjectURL(file),
+        altText: existingAltText,
+        matchStatus: existingAltText ? 'manual' : 'unmatched',
+        isJpeg: file.type === 'image/jpeg' || file.name.toLowerCase().match(/\.jpe?g$/),
+        isPng: file.type === 'image/png' || file.name.toLowerCase().endsWith('.png'),
+        isSvg: file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+      };
     }));
 
     setImages(prev => {

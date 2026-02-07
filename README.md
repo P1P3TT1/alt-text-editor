@@ -11,7 +11,7 @@ A browser-based tool for batch-editing image metadata (alt text). Upload images 
 - **100% client-side** – No data leaves your browser
 - **JPEG, PNG & SVG support** – Full metadata embedding for all three formats
 - **Bilingual interface** – Finnish and Swedish languages with persistent preference
-- **Dark mode** – Automatic theme detection with manual toggle (Ctrl+Shift+D)
+- **Dark mode** – Automatic theme detection with manual toggle
 
 ## Quick Start
 

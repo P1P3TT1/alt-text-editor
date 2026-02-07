@@ -562,18 +562,6 @@ function App() {
     document.documentElement.setAttribute('lang', language);
   }, [language]);
 
-  // Keyboard shortcut for theme toggle (Ctrl+Shift+D or Cmd+Shift+D)
-  React.useEffect(() => {
-    const handleKeyboard = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        toggleTheme();
-      }
-    };
-    window.addEventListener('keydown', handleKeyboard);
-    return () => window.removeEventListener('keydown', handleKeyboard);
-  }, [theme]);
-
   const changeLanguage = (lang) => {
     setLanguage(lang);
     localStorage.setItem('altTextEditorLanguage', lang);

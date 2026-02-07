@@ -57,7 +57,6 @@ The app auto-detects columns. Recognizes English, Finnish, and Swedish headers:
 **Dark Mode:**
 - Automatic detection of system color scheme preference
 - Manual toggle button in header
-- Keyboard shortcut: `Ctrl+Shift+D` (or `Cmd+Shift+D` on Mac)
 - Theme preference persists across sessions
 
 **File Validation:**

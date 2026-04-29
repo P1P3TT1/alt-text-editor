@@ -464,6 +464,26 @@ h1 {
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
+.row-alttext-input.over-limit {
+  border-color: var(--error);
+}
+
+.row-alttext-input.over-limit:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.char-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  text-align: right;
+}
+
+.char-count.over-limit {
+  color: var(--error);
+  font-weight: 600;
+}
+
 .row-status {
   text-align: center;
 }
@@ -489,6 +509,17 @@ h1 {
 .status-badge.manual {
   background: var(--primary-light);
   color: var(--primary);
+}
+
+.status-badge.over-limit {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+
+.info-text-error {
+  color: var(--error);
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 .actions-bar {

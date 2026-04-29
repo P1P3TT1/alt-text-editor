@@ -42,7 +42,10 @@ const translations = {
     darkMode: 'Tumma tila',
     lightMode: 'Vaalea tila',
     fileTooLarge: '{filename} on liian suuri ({size}MB). Maksimikoko on {maxSize}MB.',
-    someFilesSkipped: '{count} tiedostoa ohitettiin (liian suuret)'
+    someFilesSkipped: '{count} tiedostoa ohitettiin (liian suuret)',
+    tooLong: 'Liian pitkä',
+    overLimit: 'Yli rajan',
+    altTextTooLong: '{count} alt-tekstiä ylittää {max} merkin rajan'
   },
   sv: {
     title: 'Alternativ textredigerare',
@@ -81,7 +84,10 @@ const translations = {
     darkMode: 'Mörkt läge',
     lightMode: 'Ljust läge',
     fileTooLarge: '{filename} är för stor ({size}MB). Maximal storlek är {maxSize}MB.',
-    someFilesSkipped: '{count} filer hoppades över (för stora)'
+    someFilesSkipped: '{count} filer hoppades över (för stora)',
+    tooLong: 'För lång',
+    overLimit: 'Över gränsen',
+    altTextTooLong: '{count} alt-text överskrider gränsen på {max} tecken'
   }
 };
 
@@ -552,6 +558,9 @@ function matchFilenames(imageFilename, excelFilenames) {
 // Maximum file size in bytes (100MB)
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
+// IPTC AltTextAccessibility recommended maximum length
+const MAX_ALT_TEXT_LENGTH = 250;
+
 function App() {
   const [images, setImages] = useState([]);
   const [excelData, setExcelData] = useState(null);
@@ -869,6 +878,7 @@ function App() {
 
   const matchedCount = images.filter(img => img.matchStatus === 'matched').length;
   const withAltTextCount = images.filter(img => img.altText).length;
+  const overLimitCount = images.filter(img => img.altText && img.altText.length > MAX_ALT_TEXT_LENGTH).length;
 
   return (
     <div className="app">
@@ -996,37 +1006,49 @@ function App() {
               <div>{t('altText')}</div>
               <div>{t('status')}</div>
             </div>
-            {images.map(img => (
-              <div className="table-row" key={img.id}>
-                <img className="row-thumbnail" src={img.preview} alt="" />
-                <div className="row-filename">{img.name}</div>
-                <div>
-                  <textarea
-                    className="row-alttext-input"
-                    value={img.altText}
-                    onChange={(e) => updateAltText(img.id, e.target.value)}
-                    placeholder={t('enterAltText')}
-                    rows={2}
-                  />
+            {images.map(img => {
+              const isOverLimit = img.altText.length > MAX_ALT_TEXT_LENGTH;
+              return (
+                <div className="table-row" key={img.id}>
+                  <img className="row-thumbnail" src={img.preview} alt="" />
+                  <div className="row-filename">{img.name}</div>
+                  <div>
+                    <textarea
+                      className={`row-alttext-input ${isOverLimit ? 'over-limit' : ''}`}
+                      value={img.altText}
+                      onChange={(e) => updateAltText(img.id, e.target.value)}
+                      placeholder={t('enterAltText')}
+                      rows={2}
+                    />
+                    <div className={`char-count ${isOverLimit ? 'over-limit' : ''}`}>
+                      {img.altText.length} / {MAX_ALT_TEXT_LENGTH}
+                    </div>
+                  </div>
+                  <div className="row-status">
+                    <span className={`status-badge ${isOverLimit ? 'over-limit' : img.matchStatus}`}>
+                      {isOverLimit ? t('tooLong') :
+                       img.matchStatus === 'matched' ? t('statusMatched') :
+                       img.matchStatus === 'manual' ? t('statusManual') : t('statusNoMatch')}
+                    </span>
+                  </div>
                 </div>
-                <div className="row-status">
-                  <span className={`status-badge ${img.matchStatus}`}>
-                    {img.matchStatus === 'matched' ? t('statusMatched') :
-                     img.matchStatus === 'manual' ? t('statusManual') : t('statusNoMatch')}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="actions-bar">
             <div className="info-text">
               {withAltTextCount} / {images.length} {t('haveAltText')}
+              {overLimitCount > 0 && (
+                <div className="info-text-error">
+                  {t('altTextTooLong', { count: overLimitCount, max: MAX_ALT_TEXT_LENGTH })}
+                </div>
+              )}
             </div>
             <button
               className="btn btn-primary"
               onClick={processAndDownload}
-              disabled={withAltTextCount === 0}
+              disabled={withAltTextCount === 0 || overLimitCount > 0}
             >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

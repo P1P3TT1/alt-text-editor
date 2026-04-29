@@ -45,7 +45,8 @@ const translations = {
     someFilesSkipped: '{count} tiedostoa ohitettiin (liian suuret)',
     tooLong: 'Liian pitkä',
     overLimit: 'Yli rajan',
-    altTextTooLong: '{count} alt-tekstiä ylittää {max} merkin rajan'
+    altTextTooLong: '{count} alt-tekstiä ylittää {max} merkin rajan',
+    altTextLanguage: 'Alt-tekstin kieli:'
   },
   sv: {
     title: 'Alternativ textredigerare',
@@ -87,7 +88,8 @@ const translations = {
     someFilesSkipped: '{count} filer hoppades över (för stora)',
     tooLong: 'För lång',
     overLimit: 'Över gränsen',
-    altTextTooLong: '{count} alt-text överskrider gränsen på {max} tecken'
+    altTextTooLong: '{count} alt-text överskrider gränsen på {max} tecken',
+    altTextLanguage: 'Alt-textens språk:'
   }
 };
 
@@ -161,13 +163,13 @@ const PNG = {
     return (crc ^ 0xFFFFFFFF) >>> 0;
   },
 
-  createXMPChunk(description) {
+  createXMPChunk(description, lang) {
     // IPTC AltTextAccessibility - unified schema with JPEG for cross-format consistency
     const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description rdf:about="" xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/">
-      <Iptc4xmpCore:AltTextAccessibility><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></Iptc4xmpCore:AltTextAccessibility>
+      <Iptc4xmpCore:AltTextAccessibility><rdf:Alt><rdf:li xml:lang="${lang}">${this.escapeXML(description)}</rdf:li></rdf:Alt></Iptc4xmpCore:AltTextAccessibility>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
@@ -193,7 +195,7 @@ const PNG = {
     return [...lengthBytes, ...typeBytes, ...data, ...crcBytes];
   },
 
-  insertMetadata(pngDataUrl, description) {
+  insertMetadata(pngDataUrl, description, lang) {
     const base64 = pngDataUrl.split(',')[1];
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -202,7 +204,7 @@ const PNG = {
     for (let i = 0; i < 8; i++) if (bytes[i] !== this.SIGNATURE[i]) return pngDataUrl;
 
     // IPTC AltTextAccessibility via XMP in PNG iTXt chunk - unified schema with JPEG
-    const xmpChunk = this.createXMPChunk(description);
+    const xmpChunk = this.createXMPChunk(description, lang);
 
     let pos = 8;
     const ihdrLength = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
@@ -244,13 +246,13 @@ const PNG = {
 // ============================================
 
 const JPEG_XMP = {
-  createXMPSegment(description) {
+  createXMPSegment(description, lang) {
     // IPTC AltTextAccessibility for accessibility metadata
     const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description rdf:about="" xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/">
-      <Iptc4xmpCore:AltTextAccessibility><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></Iptc4xmpCore:AltTextAccessibility>
+      <Iptc4xmpCore:AltTextAccessibility><rdf:Alt><rdf:li xml:lang="${lang}">${this.escapeXML(description)}</rdf:li></rdf:Alt></Iptc4xmpCore:AltTextAccessibility>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
@@ -272,13 +274,13 @@ const JPEG_XMP = {
   }
 };
 
-function insertXMPIntoJPEG(jpegDataUrl, description) {
+function insertXMPIntoJPEG(jpegDataUrl, description, lang) {
   const base64 = jpegDataUrl.split(',')[1];
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
 
-  const xmpSegment = JPEG_XMP.createXMPSegment(description);
+  const xmpSegment = JPEG_XMP.createXMPSegment(description, lang);
 
   const outputParts = [[bytes[0], bytes[1]]];
   let i = 2;
@@ -335,9 +337,9 @@ function insertXMPIntoJPEG(jpegDataUrl, description) {
 // ============================================
 
 function extractDescriptionFromXMP(xmpString) {
-  // Look for IPTC AltTextAccessibility first, then fall back to dc:description for legacy files
-  const altTextMatch = xmpString.match(/<Iptc4xmpCore:AltTextAccessibility[^>]*>[\s\S]*?<rdf:li[^>]*xml:lang="x-default"[^>]*>([\s\S]*?)<\/rdf:li>/);
-  const match = altTextMatch || xmpString.match(/<rdf:li[^>]*xml:lang="x-default"[^>]*>([\s\S]*?)<\/rdf:li>/);
+  // Look for IPTC AltTextAccessibility first (any xml:lang), then fall back to dc:description for legacy files
+  const altTextMatch = xmpString.match(/<Iptc4xmpCore:AltTextAccessibility[^>]*>[\s\S]*?<rdf:li[^>]*xml:lang="[^"]*"[^>]*>([\s\S]*?)<\/rdf:li>/);
+  const match = altTextMatch || xmpString.match(/<rdf:li[^>]*xml:lang="[^"]*"[^>]*>([\s\S]*?)<\/rdf:li>/);
   if (!match) return null;
   return match[1]
     .replace(/&amp;/g, '&')
@@ -561,6 +563,13 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 // IPTC AltTextAccessibility recommended maximum length
 const MAX_ALT_TEXT_LENGTH = 250;
 
+// Available languages for the alt text xml:lang tag (BCP 47 codes)
+const ALT_TEXT_LANGUAGES = [
+  { code: 'fi', label: 'Suomi' },
+  { code: 'sv', label: 'Svenska' },
+  { code: 'en', label: 'English' }
+];
+
 function App() {
   const [images, setImages] = useState([]);
   const [excelData, setExcelData] = useState(null);
@@ -570,6 +579,11 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [toast, setToast] = useState(null);
   const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('altTextEditorLanguage') || 'fi';
+  });
+  const [altTextLang, setAltTextLang] = useState(() => {
+    const saved = localStorage.getItem('altTextEditorAltTextLang');
+    if (saved && ALT_TEXT_LANGUAGES.some(l => l.code === saved)) return saved;
     return localStorage.getItem('altTextEditorLanguage') || 'fi';
   });
   const [theme, setTheme] = useState(() => {
@@ -611,6 +625,11 @@ function App() {
   const changeLanguage = (lang) => {
     setLanguage(lang);
     localStorage.setItem('altTextEditorLanguage', lang);
+  };
+
+  const changeAltTextLang = (lang) => {
+    setAltTextLang(lang);
+    localStorage.setItem('altTextEditorAltTextLang', lang);
   };
 
   const toggleTheme = () => {
@@ -793,11 +812,11 @@ function App() {
     let outputDataUrl = dataUrl;
 
     if (img.isJpeg) {
-      outputDataUrl = insertXMPIntoJPEG(dataUrl, img.altText);
+      outputDataUrl = insertXMPIntoJPEG(dataUrl, img.altText, altTextLang);
     }
 
     if (img.isPng) {
-      outputDataUrl = PNG.insertMetadata(dataUrl, img.altText);
+      outputDataUrl = PNG.insertMetadata(dataUrl, img.altText, altTextLang);
     }
 
     return { name: img.name, blob: dataUrlToBlob(outputDataUrl) };
@@ -995,6 +1014,17 @@ function App() {
               </div>
             </div>
             <div className="btn-group">
+              <label className="alt-text-lang-selector">
+                <span className="alt-text-lang-label">{t('altTextLanguage')}</span>
+                <select
+                  value={altTextLang}
+                  onChange={(e) => changeAltTextLang(e.target.value)}
+                >
+                  {ALT_TEXT_LANGUAGES.map(l => (
+                    <option key={l.code} value={l.code}>{l.label} ({l.code})</option>
+                  ))}
+                </select>
+              </label>
               <button className="btn btn-secondary btn-sm" onClick={clearAll}>{t('clearAll')}</button>
             </div>
           </div>

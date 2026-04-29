@@ -7,6 +7,8 @@ A browser-based tool for batch-editing image metadata (alt text). Upload images 
 - **Batch import** – Upload multiple images at once (max 100MB per file)
 - **Excel/CSV mapping** – Automatically match filenames to alt texts
 - **Standard metadata format** – Writes to IPTC AltTextAccessibility (XMP) and SVG `<title>` element
+- **Language tagging** – Tag alt texts with the correct language (Finnish, Swedish, English) via `xml:lang`
+- **250 character limit** – Per IPTC recommendation; download is blocked until any over-limit alt texts are fixed
 - **Smart downloads** – Single file downloads directly, multiple files bundle into a ZIP
 - **100% client-side** – No data leaves your browser
 - **JPEG, PNG & SVG support** – Full metadata embedding for all three formats
@@ -36,13 +38,15 @@ The app auto-detects columns. Recognizes English, Finnish, and Swedish headers:
 ## Metadata Written
 
 **JPEG files:**
-- IPTC `AltTextAccessibility` (XMP) – Standard accessibility alt text field
+- IPTC `AltTextAccessibility` (XMP) – Standard accessibility alt text field, tagged with selected `xml:lang`
 
 **PNG files:**
-- IPTC `AltTextAccessibility` (XMP) – Unified schema with JPEG for cross-format consistency
+- IPTC `AltTextAccessibility` (XMP) – Unified schema with JPEG, tagged with selected `xml:lang`
 
 **SVG files:**
 - `<title>` element – Standard metadata for CMS alt text extraction
+
+The XMP `rdf:Alt` entry is written with the language code chosen in the alt text language selector (e.g. `xml:lang="fi"`). Add new languages by extending the `ALT_TEXT_LANGUAGES` array in `app.js`.
 
 ## User Interface
 
@@ -56,10 +60,15 @@ The app auto-detects columns. Recognizes English, Finnish, and Swedish headers:
 - Manual toggle button in header
 - Theme preference persists across sessions
 
-**File Validation:**
+**Alt Text Language:**
+- Separate selector for the `xml:lang` value written to the IPTC AltTextAccessibility field
+- Independent of UI language; defaults to UI language on first run
+- Preference saved to localStorage
+
+**Validation:**
 - Maximum file size: 100MB per image
-- Clear error messages for oversized files
-- Automatic filtering with user notifications
+- Maximum alt text length: 250 characters (IPTC recommendation)
+- Per-row character counter; over-limit rows are highlighted and block the download
 
 ## Privacy & Security
 

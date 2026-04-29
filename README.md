@@ -6,7 +6,7 @@ A browser-based tool for batch-editing image metadata (alt text). Upload images 
 
 - **Batch import** – Upload multiple images at once (max 100MB per file)
 - **Excel/CSV mapping** – Automatically match filenames to alt texts
-- **Multiple metadata formats** – Writes to XMP, IPTC, and SVG accessibility tags
+- **Standard metadata format** – Writes to IPTC AltTextAccessibility (XMP) and SVG `<title>` element
 - **Smart downloads** – Single file downloads directly, multiple files bundle into a ZIP
 - **100% client-side** – No data leaves your browser
 - **JPEG, PNG & SVG support** – Full metadata embedding for all three formats
@@ -36,16 +36,13 @@ The app auto-detects columns. Recognizes English, Finnish, and Swedish headers:
 ## Metadata Written
 
 **JPEG files:**
-- XMP `dc:description` – Multilingual and structured metadata
-- IPTC Caption/Abstract – Broadest tool compatibility
+- IPTC `AltTextAccessibility` (XMP) – Standard accessibility alt text field
 
 **PNG files:**
-- XMP `dc:description` – Unified schema with JPEG for cross-format consistency
+- IPTC `AltTextAccessibility` (XMP) – Unified schema with JPEG for cross-format consistency
 
 **SVG files:**
-- `<title>` element – The only field that affects browser accessibility (WCAG)
-- `aria-label` attribute
-- `role="img"` attribute
+- `<title>` element – Standard metadata for CMS alt text extraction
 
 ## User Interface
 

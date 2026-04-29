@@ -115,10 +115,6 @@ const SVG = {
       // Insert as first child of svg element
       svgElement.insertBefore(titleElement, svgElement.firstChild);
 
-      // Add aria-label for better accessibility
-      svgElement.setAttribute('aria-label', description);
-      svgElement.setAttribute('role', 'img');
-
       // Serialize back to string
       const serializer = new XMLSerializer();
       return serializer.serializeToString(doc);
@@ -160,12 +156,12 @@ const PNG = {
   },
 
   createXMPChunk(description) {
-    // XMP dc:description - unified schema with JPEG for cross-format consistency
+    // IPTC AltTextAccessibility - unified schema with JPEG for cross-format consistency
     const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <dc:description><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></dc:description>
+    <rdf:Description rdf:about="" xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/">
+      <Iptc4xmpCore:AltTextAccessibility><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></Iptc4xmpCore:AltTextAccessibility>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
@@ -199,7 +195,7 @@ const PNG = {
 
     for (let i = 0; i < 8; i++) if (bytes[i] !== this.SIGNATURE[i]) return pngDataUrl;
 
-    // Only use XMP dc:description for PNG - unified schema with JPEG
+    // IPTC AltTextAccessibility via XMP in PNG iTXt chunk - unified schema with JPEG
     const xmpChunk = this.createXMPChunk(description);
 
     let pos = 8;
@@ -243,12 +239,12 @@ const PNG = {
 
 const JPEG_XMP = {
   createXMPSegment(description) {
-    // XMP dc:description for multilingual and structured metadata
+    // IPTC AltTextAccessibility for accessibility metadata
     const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <dc:description><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></dc:description>
+    <rdf:Description rdf:about="" xmlns:Iptc4xmpCore="http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/">
+      <Iptc4xmpCore:AltTextAccessibility><rdf:Alt><rdf:li xml:lang="x-default">${this.escapeXML(description)}</rdf:li></rdf:Alt></Iptc4xmpCore:AltTextAccessibility>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
@@ -267,52 +263,6 @@ const JPEG_XMP = {
 
   escapeXML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-};
-
-// ============================================
-// IPTC utilities
-// ============================================
-
-const IPTC = {
-  MARKER: 0x1C,
-  RECORD_APP: 2,
-  CAPTION: 120,
-
-  stringToBytes(str) {
-    return Array.from(new TextEncoder().encode(str));
-  },
-
-  createDataset(record, dataset, value) {
-    const valueBytes = this.stringToBytes(value);
-    const length = valueBytes.length;
-    const result = [this.MARKER, record, dataset, (length >> 8) & 0xFF, length & 0xFF, ...valueBytes];
-    return result;
-  },
-
-  createIPTCBlock(caption) {
-    return caption ? this.createDataset(this.RECORD_APP, this.CAPTION, caption) : [];
-  },
-
-  createPhotoshopIPTCResource(iptcData) {
-    const signature = [0x38, 0x42, 0x49, 0x4D];
-    const resourceId = [0x04, 0x04];
-    const name = [0x00, 0x00];
-    const size = iptcData.length;
-    const sizeBytes = [(size >> 24) & 0xFF, (size >> 16) & 0xFF, (size >> 8) & 0xFF, size & 0xFF];
-    const resource = [...signature, ...resourceId, ...name, ...sizeBytes, ...iptcData];
-    if (resource.length % 2 !== 0) resource.push(0x00);
-    return resource;
-  },
-
-  createAPP13Segment(caption) {
-    const iptcData = this.createIPTCBlock(caption);
-    if (iptcData.length === 0) return null;
-    const photoshopResource = this.createPhotoshopIPTCResource(iptcData);
-    const identifier = [0x50, 0x68, 0x6F, 0x74, 0x6F, 0x73, 0x68, 0x6F, 0x70, 0x20, 0x33, 0x2E, 0x30, 0x00];
-    const content = [...identifier, ...photoshopResource];
-    const length = content.length + 2;
-    return [0xFF, 0xED, (length >> 8) & 0xFF, length & 0xFF, ...content];
   }
 };
 
@@ -374,53 +324,14 @@ function insertXMPIntoJPEG(jpegDataUrl, description) {
   return 'data:image/jpeg;base64,' + btoa(binary);
 }
 
-function insertIPTCIntoJPEG(jpegDataUrl, caption) {
-  const base64 = jpegDataUrl.split(',')[1];
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-
-  const app13 = IPTC.createAPP13Segment(caption);
-  if (!app13) return jpegDataUrl;
-
-  const outputParts = [[bytes[0], bytes[1]]];
-  let i = 2;
-
-  while (i < bytes.length - 1) {
-    if (bytes[i] !== 0xFF) { outputParts.push(Array.from(bytes.slice(i))); break; }
-    const marker = bytes[i + 1];
-    if (marker === 0xD8) { i += 2; continue; }
-    if (marker === 0xD9 || marker === 0xDA) { outputParts.push(app13); outputParts.push(Array.from(bytes.slice(i))); break; }
-
-    if ((marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE || marker === 0xDB || marker === 0xC0 || marker === 0xC2 || marker === 0xC4) {
-      const segmentLength = (bytes[i + 2] << 8) | bytes[i + 3];
-      if (marker === 0xED) { i += 2 + segmentLength; continue; }
-      if (marker === 0xE0 || marker === 0xE1) {
-        outputParts.push(Array.from(bytes.slice(i, i + 2 + segmentLength)));
-        i += 2 + segmentLength;
-        continue;
-      }
-      if (!outputParts.some(p => p.length > 2 && p[0] === 0xFF && p[1] === 0xED)) outputParts.push(app13);
-      outputParts.push(Array.from(bytes.slice(i, i + 2 + segmentLength)));
-      i += 2 + segmentLength;
-    } else { i++; }
-  }
-
-  if (!outputParts.some(p => p.length > 2 && p[0] === 0xFF && p[1] === 0xED)) outputParts.splice(1, 0, app13);
-
-  const output = outputParts.flat();
-  const outputArray = new Uint8Array(output);
-  let binary = '';
-  for (let i = 0; i < outputArray.length; i++) binary += String.fromCharCode(outputArray[i]);
-  return 'data:image/jpeg;base64,' + btoa(binary);
-}
-
 // ============================================
 // Metadata reading utilities
 // ============================================
 
 function extractDescriptionFromXMP(xmpString) {
-  const match = xmpString.match(/<rdf:li[^>]*xml:lang="x-default"[^>]*>([\s\S]*?)<\/rdf:li>/);
+  // Look for IPTC AltTextAccessibility first, then fall back to dc:description for legacy files
+  const altTextMatch = xmpString.match(/<Iptc4xmpCore:AltTextAccessibility[^>]*>[\s\S]*?<rdf:li[^>]*xml:lang="x-default"[^>]*>([\s\S]*?)<\/rdf:li>/);
+  const match = altTextMatch || xmpString.match(/<rdf:li[^>]*xml:lang="x-default"[^>]*>([\s\S]*?)<\/rdf:li>/);
   if (!match) return null;
   return match[1]
     .replace(/&amp;/g, '&')
@@ -874,7 +785,6 @@ function App() {
 
     if (img.isJpeg) {
       outputDataUrl = insertXMPIntoJPEG(dataUrl, img.altText);
-      outputDataUrl = insertIPTCIntoJPEG(outputDataUrl, img.altText);
     }
 
     if (img.isPng) {
